@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	skillcore "github.com/Hafuunano/Core-SkillAction/core"
 	"github.com/Hafuunano/Core-SkillAction/cache/database"
 	"github.com/Hafuunano/Core-SkillAction/types"
 	"github.com/Hafuunano/Protocol-ConvertTool/protocol"
@@ -43,6 +44,7 @@ func SetStore(s *database.Store) {
 }
 
 func init() {
+	SetStore(skillcore.DefaultCache()) // so command handler and Middleware/New() share the same store
 	protocol.Engine.WithMeta(Meta).OnMessage().IsOnlySuperAdmin().Func(handleWhitelistCommands)
 }
 

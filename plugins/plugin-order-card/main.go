@@ -25,6 +25,41 @@ const (
 	timezone          = "Asia/Shanghai"
 )
 
+// formatUpdatedAt returns relative time like "5分钟前" or "2小时前" from RFC3339 UpdatedAt.
+func formatUpdatedAt(updatedAt string) string {
+	if updatedAt == "" {
+		return ""
+	}
+	t, err := time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		return updatedAt
+	}
+	d := time.Since(t)
+	if d < time.Minute {
+		return "刚刚"
+	}
+	if d < time.Hour {
+		return strconv.Itoa(int(d.Minutes())) + "分钟前"
+	}
+	if d < 24*time.Hour {
+		return strconv.Itoa(int(d.Hours())) + "小时前"
+	}
+	days := int(d.Hours() / 24)
+	return strconv.Itoa(days) + "天前"
+}
+
+// flavorByValue returns a short line based on current headcount (0-4 / 5-10 / >10).
+func flavorByValue(n int) string {
+	switch {
+	case n <= 4:
+		return "看起来今天还没有人出勤诶xwx"
+	case n <= 10:
+		return "人有点多，稍微考虑一下再去吧！"
+	default:
+		return "呜呜，太多了，不去了"
+	}
+}
+
 // GroupData is the JSON stored at orderCard:data:{gid}.
 type GroupData struct {
 	Value           int      `json:"value"`
@@ -221,14 +256,15 @@ func handleOrderCardMessage(ctx protocol.Context) {
 		_ = s.Set(keyPrefixData+gid, string(newRaw))
 		_ = s.Set(cooldownKey, now.Format(time.RFC3339))
 	}
-	// Output current value (and state)
-	msg := "当前数值: " + strconv.Itoa(data.Value)
-	if data.LastUpdaterName != "" {
-		msg += "，上次更新: " + data.LastUpdaterName
-	}
+	// Output: 当前人数 / 更新时间 / 更新人 + flavor by range
+	msg := "当前人数：" + strconv.Itoa(data.Value) + "\n"
 	if data.UpdatedAt != "" {
-		msg += " @ " + data.UpdatedAt
+		msg += "更新时间：" + formatUpdatedAt(data.UpdatedAt) + "\n"
 	}
+	if data.LastUpdaterName != "" {
+		msg += "更新人：" + data.LastUpdaterName + "\n"
+	}
+	msg += flavorByValue(data.Value)
 	_ = ctx.SendPlainMessage(msg)
 }
 

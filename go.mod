@@ -4,10 +4,8 @@ go 1.25.7
 
 require (
 	github.com/Hafuunano/Core-SkillAction v0.0.0-20260222192517-76b7787fe50a
-	github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222192558-f0c62f1bac96
+	github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222204501-a2f66c9ce18c
 )
-
-replace github.com/Hafuunano/Protocol-ConvertTool => ../Protocol-ConvertTool
 
 require (
 	github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d // indirect
