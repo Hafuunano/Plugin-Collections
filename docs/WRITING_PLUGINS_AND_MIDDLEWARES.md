@@ -72,6 +72,19 @@ var Meta = types.PluginEngine{
 
 在插件内使用：`id := Meta.PluginID`、`name := Meta.PluginName`、`typ := Meta.PluginType`、`on := Meta.PluginIsDefaultOn`。
 
+### 1.6 多事件类型与注册（Multi-event and RegisterOn）
+
+协议层支持**多条链、按事件类型区分**，宿主可将不同链挂到不同的 on（如 OnMessage、OnMessageReply、OnNotice、OnRequest）。插件通过注册到不同 hook 选择在哪些事件下被调用。
+
+- **默认**：`protocol.Register(Plugin)` 将 handler 注册到默认链 **HookMessage**（全部消息），与现有行为一致。
+- **指定事件**：`protocol.RegisterOn(hook string, h Handler)` 将 handler 注册到指定 hook 的链。在 `init()` 中调用。
+- **Hook 常量**（在 `github.com/Hafuunano/Protocol-ConvertTool/protocol` 包中）：
+  - `protocol.HookMessage`：所有消息（宿主如 `OnMessage()`）。
+  - `protocol.HookMessageReply`：仅「回复机器人」或「@ 机器人」的消息（宿主如 `OnMessage(OnlyToMe)`）。
+  - `protocol.HookNotice`：通知事件；`protocol.HookRequest`：请求事件（如加群/加好友审批）。
+
+示例：只处理「回复/@ 我」时再回复的插件，在 `init()` 中写 `protocol.RegisterOn(protocol.HookMessageReply, ReplyHandler)`；若同时处理全部消息与回复，可写 `protocol.Register(Plugin)` 与 `protocol.RegisterOn(protocol.HookMessageReply, ReplyOnlyHandler)`。现有仅调用 `protocol.Register(Plugin)` 的插件无需修改，仍挂在默认「全部消息」链上。
+
 ### 1.5 插件内行为约定
 
 - 仅通过 `ctx` 与用户/环境交互：`ctx.PlainText()`、`ctx.Reply()`、`ctx.Send()`、`ctx.UserID()`、`ctx.GroupID()`、`ctx.IsSuperAdmin()` 等。
