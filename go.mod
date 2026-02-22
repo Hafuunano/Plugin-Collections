@@ -3,7 +3,7 @@ module github.com/Hafuunano/Plugin-Collections
 go 1.25.7
 
 require (
-	github.com/Hafuunano/Core-SkillAction v0.0.0-20260222192517-76b7787fe50a
+	github.com/Hafuunano/Core-SkillAction v0.0.0-20260222211453-7343afa8b9ea
 	github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222204501-a2f66c9ce18c
 )
 

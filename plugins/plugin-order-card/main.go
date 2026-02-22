@@ -181,7 +181,8 @@ func handleRemoveOrderCardRegister(ctx protocol.Context) {
 	_ = ctx.SendPlainMessage("已删除群组 " + gid)
 }
 
-var opRegex = regexp.MustCompile(`(\+|-|=)(\d+)`)
+// opRegex: allow optional space between operator and number (e.g. "= 10" or "=10")
+var opRegex = regexp.MustCompile(`(\+|-|=)\s*(\d+)`)
 
 func handleOrderCardMessage(ctx protocol.Context) {
 	gid := ctx.GroupID()
