@@ -11,6 +11,10 @@ import (
 // Meta is this plugin's metadata; use Meta.PluginID, Meta.PluginName, etc. inside this package.
 var Meta = types.NewPluginEngine("plugin-echo-001", "plugin-echo", "skill", true)
 
+func init() {
+	protocol.Register(Plugin)
+}
+
 // Plugin is the required entry. Host calls it for each message with a protocol.Context.
 func Plugin(ctx protocol.Context) {
 	handleEcho(ctx)

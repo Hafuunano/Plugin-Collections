@@ -2,3 +2,5 @@ github.com/Hafuunano/Core-SkillAction v0.0.0-20260222154012-68dd52018668 h1:0bUI
 github.com/Hafuunano/Core-SkillAction v0.0.0-20260222154012-68dd52018668/go.mod h1:uPTfERPFcDCGuOCzMbL7KRq7hrM1Lc40+0gWtwYC5I0=
 github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222152445-7f82a9880185 h1:I7MnTBJf8AXntt6do5RU9RYG0MIMuFiIm/+SAZc+COk=
 github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222152445-7f82a9880185/go.mod h1:RopqMcv3u/o+ZUxhrGEMar1eKP61Pyz35PsaxU6lvXw=
+github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222170558-d968a518d9aa h1:Bjx+xqc+rgMSCCAqdOwUrhGs99UzM85a+WS30okncLA=
+github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222170558-d968a518d9aa/go.mod h1:RopqMcv3u/o+ZUxhrGEMar1eKP61Pyz35PsaxU6lvXw=
