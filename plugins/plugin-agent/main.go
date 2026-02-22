@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -72,8 +74,8 @@ type chatReq struct {
 type chatResp struct {
 	Choices []struct {
 		Message struct {
-			Content string `json:"content"`
-			Role    string `json:"role"`
+			Content json.RawMessage `json:"content"`
+			Role    string         `json:"role"`
 		} `json:"message"`
 	} `json:"choices"`
 }
@@ -286,8 +288,17 @@ func getOrCreateSession(key string) *userSession {
 	return s
 }
 
+// cqAtRegex matches CQ code like [CQ:at,qq=123456] or [CQ:at,qq=123456,text=@nick]
+var cqAtRegex = regexp.MustCompile(`\[CQ:at,qq=\d+(?:,[^\]]*)?\]`)
+
+// stripCQAt removes CQ at segments from plain text so only real content is sent to LLM.
+func stripCQAt(s string) string {
+	return strings.TrimSpace(cqAtRegex.ReplaceAllString(s, ""))
+}
+
 func handleChat(ctx protocol.Context) {
-	text := strings.TrimSpace(ctx.PlainText())
+	raw := ctx.PlainText()
+	text := stripCQAt(raw)
 	if text == "" {
 		return
 	}
@@ -318,6 +329,7 @@ func handleChat(ctx protocol.Context) {
 
 	reply, err := callLLM(messages)
 	if err != nil {
+		log.Printf("[plugin-agent] callLLM error: %v", err)
 		_ = ctx.Reply(protocol.Message{
 			protocol.Segment{Type: protocol.SegmentTypeText, Data: map[string]any{"text": "呜…出错了: " + err.Error()}},
 		})
@@ -397,5 +409,34 @@ func callLLM(messages []chatMessage) (string, error) {
 	if len(r.Choices) == 0 {
 		return "", fmt.Errorf("no choices in response")
 	}
-	return strings.TrimSpace(r.Choices[0].Message.Content), nil
+	return extractContent(r.Choices[0].Message.Content)
+}
+
+// extractContent supports content as string or array of {type, text} (OpenAI/Moonshot compatible).
+func extractContent(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 {
+		return "", fmt.Errorf("empty content")
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return strings.TrimSpace(s), nil
+	}
+	var parts []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(raw, &parts); err != nil {
+		return "", fmt.Errorf("content neither string nor array: %w", err)
+	}
+	var b strings.Builder
+	for _, p := range parts {
+		if p.Type == "text" {
+			b.WriteString(p.Text)
+		}
+	}
+	out := strings.TrimSpace(b.String())
+	if out == "" {
+		return "", fmt.Errorf("no text in content")
+	}
+	return out, nil
 }
