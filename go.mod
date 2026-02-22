@@ -3,14 +3,12 @@ module github.com/Hafuunano/Plugin-Collections
 go 1.25.6
 
 require (
+	github.com/Hafuunano/Core-SkillAction v0.0.0
 	github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260219210233-d010567d8319
 	github.com/glebarez/sqlite v1.11.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/gorm v1.25.12
 )
-
-// Local development: use sibling UniTransfer (module name is Protocol-ConvertTool).
-replace github.com/Hafuunano/Protocol-ConvertTool => ../UniTransfer
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

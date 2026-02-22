@@ -3,8 +3,12 @@
 package pluginhello
 
 import (
+	"github.com/Hafuunano/Core-SkillAction/types"
 	"github.com/Hafuunano/Protocol-ConvertTool/protocol"
 )
+
+// Meta is this plugin's metadata; use Meta.PluginID, Meta.PluginName, etc. inside this package.
+var Meta = types.NewPluginEngine("plugin-hello-001", "plugin-hello", "skill", true)
 
 // triggerWord is loaded in Init(); default is "hello".
 var triggerWord = "hello"

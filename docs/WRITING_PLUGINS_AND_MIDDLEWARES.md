@@ -8,8 +8,9 @@
 
 ### 1.1 依赖与归属
 
-- **唯一协议依赖**：插件仅依赖 `github.com/Hafuunano/Protocol-ConvertTool`，使用其 `protocol` 包（`Context`、`Message`、`Segment` 等）。
-- **不直接依赖宿主或 Core**：不要 import 宿主（Lucy）或 Core-SkillAction。若需 DB/Cache/Timer，通过 Protocol 对 Context 的扩展（如 `Services()`）由宿主注入后使用。
+- **协议依赖**：插件依赖 `github.com/Hafuunano/Protocol-ConvertTool`，使用其 `protocol` 包（`Context`、`Message`、`Segment` 等）。
+- **可选依赖 Core 的 types**：若在插件内直接定义元信息（见 1.5），可 import `github.com/Hafuunano/Core-SkillAction/types`，使用 `types.NewPluginEngine` 或 `types.PluginEngine`。
+- **不直接依赖宿主**：不要 import 宿主（Lucy）。若需 DB/Cache/Timer，通过 Protocol 对 Context 的扩展（如 `Services()`）由宿主注入后使用。
 - **归属**：插件代码放在本仓库 `plugins/plugin-<name>/` 下（如 `plugins/plugin-orderCard/`）。
 
 ### 1.2 包与目录结构
@@ -43,13 +44,41 @@ Plugin-Collections/
 - Core-SkillAction 的 `types.PluginEngine` 提供 `PluginID`、`PluginName`、`PluginType`、`PluginIsDefaultOn`。
 - 约定：插件的「逻辑名」与配置中的 `PluginName` 对应，便于宿主按配置开关（是否加入插件列表）。
 
+### 1.5 插件内定义元信息（Plugin Meta）
+
+- 推荐在插件包内**直接定义**本插件的元信息，便于在插件内部直接使用（如 `Meta.PluginID`、`Meta.PluginName`），无需从中心 config 读取。
+- 依赖：`github.com/Hafuunano/Core-SkillAction/types`，使用 `types.NewPluginEngine(id, name, pluginType string, isDefaultOn bool)` 或 `types.PluginEngine{...}`。
+- 约定：包级变量命名为 `Meta` 或 `Plugin`；若入口函数已命名为 `Plugin(ctx)`，则元信息变量建议用 `Meta`，避免同名。
+
+**示例一（一行定义）**：见 `plugins/plugin-hello/main.go`、`plugins/plugin-echo/main.go`：
+
+```go
+import "github.com/Hafuunano/Core-SkillAction/types"
+
+// Meta is this plugin's metadata; use Meta.PluginID, Meta.PluginName, etc. inside this package.
+var Meta = types.NewPluginEngine("plugin-hello-001", "plugin-hello", "skill", true)
+```
+
+**示例二（结构体字面量）**：
+
+```go
+var Meta = types.PluginEngine{
+	PluginID:          "my-plugin-001",
+	PluginName:        "my-plugin",
+	PluginType:        "skill",
+	PluginIsDefaultOn: true,
+}
+```
+
+在插件内使用：`id := Meta.PluginID`、`name := Meta.PluginName`、`typ := Meta.PluginType`、`on := Meta.PluginIsDefaultOn`。
+
 ### 1.5 插件内行为约定
 
 - 仅通过 `ctx` 与用户/环境交互：`ctx.PlainText()`、`ctx.Reply()`、`ctx.Send()`、`ctx.UserID()`、`ctx.GroupID()`、`ctx.IsSuperAdmin()` 等。
 - 不阻塞事件循环：耗时操作建议异步或交给 Context 扩展（如 Timer/Cache）。
 - 注释统一使用英文（与项目规范一致）。
 
-### 1.6 插件示例
+### 1.7 插件示例
 
 以下为一个最小可用的插件示例：收到「hello」时回复一条消息，并展示可选 `Init()` 的用法。
 
