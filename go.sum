@@ -2,6 +2,10 @@ github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d h1:mUQ/c3wXKsUGa4Sg9
 github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d/go.mod h1:fHZFWGquNXuHttu9dUYoKuNbm3dzLETnIOnm1muSfDs=
 github.com/Hafuunano/Core-SkillAction v0.0.0-20260222154012-68dd52018668 h1:0bUIP720jGqcb808ZQfE0IgaMWzrtQZn3mLYgiW9JbI=
 github.com/Hafuunano/Core-SkillAction v0.0.0-20260222154012-68dd52018668/go.mod h1:uPTfERPFcDCGuOCzMbL7KRq7hrM1Lc40+0gWtwYC5I0=
+github.com/Hafuunano/Core-SkillAction v0.0.0-20260222192517-76b7787fe50a h1:4L8fMMKei6Sun38cpto9yO23Za2iyH0x4zQFMLjcZB8=
+github.com/Hafuunano/Core-SkillAction v0.0.0-20260222192517-76b7787fe50a/go.mod h1:uPTfERPFcDCGuOCzMbL7KRq7hrM1Lc40+0gWtwYC5I0=
+github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222192558-f0c62f1bac96 h1:iVJoxk3OFcckiol+t2N6VtskX6GmoryP/7tG/iOPZCs=
+github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222192558-f0c62f1bac96/go.mod h1:VcFUUhqlZmR+zcpzBtqMxNpOoSTMWtp32oc+rFEbzDM=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
