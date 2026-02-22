@@ -1,8 +1,13 @@
+// Package pluginping: replies "pong" when user says "ping". WithMeta(nil) at init (no meta).
 package pluginping
 
 import "github.com/Hafuunano/Protocol-ConvertTool/protocol"
 
-func init() { protocol.Engine.WithMeta(nil).OnMessage().Func(Plugin) }
+var p = protocol.Engine.WithMeta(nil)
+
+func init() {
+	p.OnMessage().Func(Plugin)
+}
 
 func Plugin(ctx protocol.Context) {
 	if ctx.PlainText() == "ping" {

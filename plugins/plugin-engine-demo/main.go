@@ -9,9 +9,9 @@ import (
 
 // Meta and registration (required: use WithMeta(Meta) then chain).
 var Meta = types.NewPluginEngine("plugin-engine-demo-001", "plugin-engine-demo", "skill", true)
+var p = protocol.Engine.WithMeta(Meta)
 
 func init() {
-	p := protocol.Engine.WithMeta(Meta)
 	// All messages: inline func(ctx). Respond to "help" or "引擎示例"
 	p.OnMessage().Func(func(ctx protocol.Context) {
 		text := ctx.PlainText()

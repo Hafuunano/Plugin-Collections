@@ -8,10 +8,13 @@ import (
 	"github.com/Hafuunano/Protocol-ConvertTool/protocol"
 )
 
-// Meta and registration (use Meta.PluginID, Meta.PluginName etc. in this package).
+// Meta and registration (required: use WithMeta(Meta) then chain).
 var Meta = types.NewPluginEngine("plugin-echo-001", "plugin-echo", "skill", true)
+var p = protocol.Engine.WithMeta(Meta)
 
-func init() { protocol.Engine.WithMeta(Meta).OnMessage().Func(Plugin) }
+func init() {
+	p.OnMessage().Func(Plugin)
+}
 
 // Plugin is the required entry. Host calls it for each message with a protocol.Context.
 func Plugin(ctx protocol.Context) {

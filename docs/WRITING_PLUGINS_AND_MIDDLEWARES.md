@@ -10,7 +10,7 @@
 
 - **协议依赖**：插件依赖 `github.com/Hafuunano/Protocol-ConvertTool`，使用其 `protocol` 包（`Context`、`Message`、`Segment` 等）。
 - **可选依赖 Core 的 types**：若在插件内直接定义元信息（见 1.5），可 import `github.com/Hafuunano/Core-SkillAction/types`，使用 `types.NewPluginEngine` 或 `types.PluginEngine`。
-- **不直接依赖宿主**：不要 import 宿主（Lucy）。若需 DB/Cache/Timer，通过 Protocol 对 Context 的扩展（如 `Services()`）由宿主注入后使用。
+- **不直接依赖宿主**：不要 import 宿主（Core）。若需 DB/Cache/Timer，通过 Protocol 对 Context 的扩展（如 `Services()`）由宿主注入后使用。
 - **归属**：插件代码放在本仓库 `plugins/plugin-<name>/` 下（如 `plugins/plugin-orderCard/`）。
 
 ### 1.2 包与目录结构
@@ -258,4 +258,4 @@ func Whitelist(next protocol.Handler) protocol.Handler {
 | 中间件   | `func(next Handler) Handler`，内部调用 `next(ctx)`     | Protocol-ConvertTool `protocol` | `types.MiddlewareEngine.MiddlewareName` |
 | Handler  | `func(ctx protocol.Context)`                           | —                            | 在 `protocol` 中定义          |
 
-按此契约编写的插件与中间件可与四仓架构（Lucy、Protocol-ConvertTool、Core-SkillAction、Plugin-Collections）及宿主的显式注册与中间件链配合使用。
+按此契约编写的插件与中间件可与四仓架构（Core、Protocol-ConvertTool、Core-SkillAction、Plugin-Collections）及宿主的显式注册与中间件链配合使用。
