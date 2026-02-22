@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Hafuunano/Core-SkillAction/cache/database"
+	skillcore "github.com/Hafuunano/Core-SkillAction/core"
 	"github.com/Hafuunano/Core-SkillAction/types"
 	"github.com/Hafuunano/Protocol-ConvertTool/protocol"
 )
@@ -25,14 +27,15 @@ const (
 	personaPathEnv  = "SOUL_PERSONA_PATH"
 	defaultPersona  = "soul/PERSONA.md"
 	sessionDataDir  = "data/llm-playground/sessions"
-	envLLMURL       = "LLM_API_URL"
-	envLLMKey       = "LLM_API_KEY"
-	envLLMModel     = "LLM_MODEL"
 	defaultURL      = "https://api.openai.com/v1"
 	defaultModel    = "gpt-3.5-turbo"
+	keyPrefixLLM    = "pluginAgent:llm:"
+	keyLLMURL       = keyPrefixLLM + "url"
+	keyLLMKey       = keyPrefixLLM + "key"
+	keyLLMModel     = keyPrefixLLM + "model"
 )
 
-// llmConfig holds the configured URL, API key, and model (set from env at init or via /setLLM* commands).
+// llmConfig holds the configured URL, API key, and model (loaded from store; code defaults then overlay from store; updated by /setLLM* and persisted to store).
 var llmConfig struct {
 	URL   string
 	Key   string
@@ -41,14 +44,60 @@ var llmConfig struct {
 var llmConfigMu sync.RWMutex
 
 var (
-	systemPrompt string
-	userSessions = make(map[string]*userSession)
-	sessionsMu   sync.RWMutex
+	storeMu       sync.RWMutex
+	store         *database.Store
+	storeInitOnce sync.Once
+	systemPrompt  string
+	userSessions  = make(map[string]*userSession)
+	sessionsMu    sync.RWMutex
 )
 
 // Meta and registration (required: use WithMeta(Meta) then chain).
 var Meta = types.NewPluginEngine("plugin-agent-001", "plugin-agent", "skill", true)
 var p = protocol.Engine.WithMeta(Meta)
+
+// SetStore sets the cache/database store for LLM config. Call from host at startup (e.g. pluginagent.SetStore(skillcore.DefaultCache())).
+func SetStore(s *database.Store) {
+	storeMu.Lock()
+	defer storeMu.Unlock()
+	store = s
+}
+
+func getStore() *database.Store {
+	storeInitOnce.Do(func() {
+		storeMu.Lock()
+		defer storeMu.Unlock()
+		if store == nil {
+			store = skillcore.DefaultCache()
+		}
+	})
+	storeMu.RLock()
+	defer storeMu.RUnlock()
+	return store
+}
+
+// loadLLMConfigFromStore overlays llmConfig with values from store (if present). Call after env/default init.
+func loadLLMConfigFromStore() {
+	s := getStore()
+	if s == nil {
+		return
+	}
+	if v, found, _ := s.Get(keyLLMURL); found && v != "" {
+		llmConfigMu.Lock()
+		llmConfig.URL = strings.TrimSuffix(strings.TrimSpace(v), "/")
+		llmConfigMu.Unlock()
+	}
+	if v, found, _ := s.Get(keyLLMKey); found && v != "" {
+		llmConfigMu.Lock()
+		llmConfig.Key = v
+		llmConfigMu.Unlock()
+	}
+	if v, found, _ := s.Get(keyLLMModel); found && v != "" {
+		llmConfigMu.Lock()
+		llmConfig.Model = strings.TrimSpace(v)
+		llmConfigMu.Unlock()
+	}
+}
 
 type userSession struct {
 	Messages      []chatMessage
@@ -75,26 +124,21 @@ type chatResp struct {
 	Choices []struct {
 		Message struct {
 			Content json.RawMessage `json:"content"`
-			Role    string         `json:"role"`
+			Role    string          `json:"role"`
 		} `json:"message"`
 	} `json:"choices"`
 }
 
 func init() {
 	loadPersona()
-	llmConfig.URL = os.Getenv(envLLMURL)
-	if llmConfig.URL == "" {
-		llmConfig.URL = defaultURL
-	}
-	llmConfig.Key = os.Getenv(envLLMKey)
-	llmConfig.Model = os.Getenv(envLLMModel)
-	if llmConfig.Model == "" {
-		llmConfig.Model = defaultModel
-	}
-	// Super admin only: /setLLMUrl, /setLLMKey, /setLLMModel
+	llmConfig.URL = defaultURL
+	llmConfig.Key = ""
+	llmConfig.Model = defaultModel
+	loadLLMConfigFromStore()
+	// Super admin only: /setLLMUrl, /setLLMKey, /setLLMModel (runs on HookMessage, so works without @)
 	p.OnMessage().IsOnlySuperAdmin().Func(handleSuperAdminCommand)
-	// When @bot or reply: treat as chat (unless already handled as command)
-	p.OnMessage().IsOnlyToMe().Func(handleOnlyToMe)
+	// When @bot or reply: host dispatches HookMessageReply only; OnMessage().IsOnlyToMe() is on HookMessage so never runs. Use OnMessageReply().
+	p.OnMessageReply().Func(handleOnlyToMe)
 }
 
 // getCommandArg returns the rest of the message after the command (prefix + command name).
@@ -147,6 +191,9 @@ func handleSuperAdminCommand(ctx protocol.Context) {
 		llmConfigMu.Lock()
 		llmConfig.URL = setURL
 		llmConfigMu.Unlock()
+		if s := getStore(); s != nil {
+			_ = s.Set(keyLLMURL, setURL)
+		}
 		_ = ctx.Reply(protocol.Message{
 			protocol.Segment{Type: protocol.SegmentTypeText, Data: map[string]any{"text": "已设置 LLM URL: " + setURL}},
 		})
@@ -160,9 +207,13 @@ func handleSuperAdminCommand(ctx protocol.Context) {
 			})
 			return
 		}
+		setKey := strings.TrimSpace(val)
 		llmConfigMu.Lock()
-		llmConfig.Key = strings.TrimSpace(val)
+		llmConfig.Key = setKey
 		llmConfigMu.Unlock()
+		if s := getStore(); s != nil {
+			_ = s.Set(keyLLMKey, setKey)
+		}
 		_ = ctx.Reply(protocol.Message{
 			protocol.Segment{Type: protocol.SegmentTypeText, Data: map[string]any{"text": "已设置 LLM API Key（已隐藏）"}},
 		})
@@ -180,6 +231,9 @@ func handleSuperAdminCommand(ctx protocol.Context) {
 		llmConfigMu.Lock()
 		llmConfig.Model = setModel
 		llmConfigMu.Unlock()
+		if s := getStore(); s != nil {
+			_ = s.Set(keyLLMModel, setModel)
+		}
 		_ = ctx.Reply(protocol.Message{
 			protocol.Segment{Type: protocol.SegmentTypeText, Data: map[string]any{"text": "已设置 LLM 模型: " + setModel}},
 		})
@@ -189,11 +243,15 @@ func handleSuperAdminCommand(ctx protocol.Context) {
 
 func handleOnlyToMe(ctx protocol.Context) {
 	text := strings.TrimSpace(ctx.PlainText())
+	log.Printf("[plugin-agent] handleOnlyToMe: %s", text)
 	if text == "" {
 		return
 	}
-	// Do not treat setLLM* as chat (super admin command already handled in handleSuperAdminCommand when super admin; for non-super admin skip)
+	// setLLM*: only super admin may run; when they @ bot with command, delegate to handleSuperAdminCommand (HookMessageReply chain does not run HookMessage handlers)
 	if isSetLLMCommand(text) {
+		if ctx.IsSuperAdmin() {
+			handleSuperAdminCommand(ctx)
+		}
 		return
 	}
 	handleChat(ctx)
@@ -217,10 +275,6 @@ func loadPersona() {
 	}
 	persona := strings.TrimSpace(string(data))
 	systemPrompt = persona + "\n\n我希望你扮演我所描述的人物"
-}
-
-func sessionKey(ctx protocol.Context) string {
-	return ctx.UserID()
 }
 
 func sessionFilePath(key string) string {
@@ -302,7 +356,7 @@ func handleChat(ctx protocol.Context) {
 	if text == "" {
 		return
 	}
-	key := sessionKey(ctx)
+	key := ctx.UserID()
 	s := getOrCreateSession(key)
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
