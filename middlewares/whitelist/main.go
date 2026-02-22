@@ -11,17 +11,22 @@ import (
 )
 
 const (
-	keyPrefixGroup = "whitelist:group:"
-	keyPrefixUser  = "whitelist:user:"
-	cmdAddGroup    = "addWhitelistGroup"
-	cmdRemoveGroup = "removeWhitelistGroup"
-	cmdAddUser     = "addWhitelistUser"
-	cmdRemoveUser  = "removeWhitelistUser"
+	keyPrefixGroup   = "whitelist:group:"
+	keyPrefixUser    = "whitelist:user:"
+	cmdAddGroup      = "addWhitelistGroup"
+	cmdRemoveGroup   = "removeWhitelistGroup"
+	cmdAddUser       = "addWhitelistUser"
+	cmdRemoveUser    = "removeWhitelistUser"
+	negativeCacheHit = 3 // after N consecutive "not found", cache in memory and skip store lookup
 )
 
 var (
-	storeMu sync.RWMutex
-	store   *database.Store
+	storeMu         sync.RWMutex
+	store           *database.Store
+	negativeCacheMu sync.RWMutex
+	negativeCache   = make(map[string]struct{}) // keys that are known "not in whitelist", skip store
+	notFoundCountMu sync.Mutex
+	notFoundCount   = make(map[string]int) // key -> consecutive "not found" count
 )
 
 // Meta is this middleware's metadata for config (MiddlewareName etc.).
@@ -144,13 +149,45 @@ func New(s *database.Store) protocol.Middleware {
 	}
 }
 
+// removeFromNegativeCache removes key from negative cache and resets its not-found count (call when adding to whitelist).
+func removeFromNegativeCache(key string) {
+	negativeCacheMu.Lock()
+	delete(negativeCache, key)
+	negativeCacheMu.Unlock()
+	notFoundCountMu.Lock()
+	delete(notFoundCount, key)
+	notFoundCountMu.Unlock()
+}
+
 // HasGroup returns true if the group is in the whitelist.
 func HasGroup(store *database.Store, groupID string) bool {
 	if store == nil || groupID == "" {
 		return false
 	}
-	_, found, _ := store.Get(keyPrefixGroup + groupID)
-	return found
+	key := keyPrefixGroup + groupID
+	negativeCacheMu.RLock()
+	_, inNegative := negativeCache[key]
+	negativeCacheMu.RUnlock()
+	if inNegative {
+		return false
+	}
+	_, found, _ := store.Get(key)
+	if found {
+		notFoundCountMu.Lock()
+		delete(notFoundCount, key)
+		notFoundCountMu.Unlock()
+		return true
+	}
+	notFoundCountMu.Lock()
+	notFoundCount[key]++
+	if notFoundCount[key] >= negativeCacheHit {
+		negativeCacheMu.Lock()
+		negativeCache[key] = struct{}{}
+		negativeCacheMu.Unlock()
+		delete(notFoundCount, key)
+	}
+	notFoundCountMu.Unlock()
+	return false
 }
 
 // AddGroup adds a group to the whitelist.
@@ -158,6 +195,7 @@ func AddGroup(store *database.Store, groupID string) error {
 	if store == nil || groupID == "" {
 		return nil
 	}
+	removeFromNegativeCache(keyPrefixGroup + groupID)
 	return store.Set(keyPrefixGroup+groupID, "1")
 }
 
@@ -174,8 +212,30 @@ func HasUser(store *database.Store, userID string) bool {
 	if store == nil || userID == "" {
 		return false
 	}
-	_, found, _ := store.Get(keyPrefixUser + userID)
-	return found
+	key := keyPrefixUser + userID
+	negativeCacheMu.RLock()
+	_, inNegative := negativeCache[key]
+	negativeCacheMu.RUnlock()
+	if inNegative {
+		return false
+	}
+	_, found, _ := store.Get(key)
+	if found {
+		notFoundCountMu.Lock()
+		delete(notFoundCount, key)
+		notFoundCountMu.Unlock()
+		return true
+	}
+	notFoundCountMu.Lock()
+	notFoundCount[key]++
+	if notFoundCount[key] >= negativeCacheHit {
+		negativeCacheMu.Lock()
+		negativeCache[key] = struct{}{}
+		negativeCacheMu.Unlock()
+		delete(notFoundCount, key)
+	}
+	notFoundCountMu.Unlock()
+	return false
 }
 
 // AddUser adds a user to the private-chat whitelist (by user ID).
@@ -183,6 +243,7 @@ func AddUser(store *database.Store, userID string) error {
 	if store == nil || userID == "" {
 		return nil
 	}
+	removeFromNegativeCache(keyPrefixUser + userID)
 	return store.Set(keyPrefixUser+userID, "1")
 }
 
