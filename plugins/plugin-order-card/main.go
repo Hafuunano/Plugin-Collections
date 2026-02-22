@@ -202,16 +202,25 @@ func handleOrderCardMessage(ctx protocol.Context) {
 		return
 	}
 	plain := strings.TrimSpace(ctx.PlainText())
-	// Trigger when message equals a password or starts with password then optional ops (e.g. "mypass" or "mypass +10")
+	// Trigger when message equals a password, or first word equals password, or starts with password immediately followed by op (e.g. "mypass", "mypass +10", "mypass=10")
 	firstWord := ""
 	if f := strings.Fields(plain); len(f) > 0 {
 		firstWord = strings.TrimSpace(f[0])
 	}
 	hitPassword := false
-	for _, pw := range data.Passwords {
-		if plain == strings.TrimSpace(pw) || firstWord == strings.TrimSpace(pw) {
+	for _, p := range data.Passwords {
+		pw := strings.TrimSpace(p)
+		if plain == pw || firstWord == pw {
 			hitPassword = true
 			break
+		}
+		// Allow "password=10" (no space between password and operator)
+		if strings.HasPrefix(plain, pw) && len(pw) > 0 {
+			rest := plain[len(pw):]
+			if rest == "" || rest[0] == '+' || rest[0] == '-' || rest[0] == '=' {
+				hitPassword = true
+				break
+			}
 		}
 	}
 	if !hitPassword {
