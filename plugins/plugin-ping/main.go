@@ -2,9 +2,7 @@ package pluginping
 
 import "github.com/Hafuunano/Protocol-ConvertTool/protocol"
 
-func init() {
-	protocol.Register(Plugin)
-}
+func init() { protocol.Engine.WithMeta(nil).OnMessage().Func(Plugin) }
 
 func Plugin(ctx protocol.Context) {
 	if ctx.PlainText() == "ping" {

@@ -85,6 +85,45 @@ var Meta = types.PluginEngine{
 
 示例：只处理「回复/@ 我」时再回复的插件，在 `init()` 中写 `protocol.RegisterOn(protocol.HookMessageReply, ReplyHandler)`；若同时处理全部消息与回复，可写 `protocol.Register(Plugin)` 与 `protocol.RegisterOn(protocol.HookMessageReply, ReplyOnlyHandler)`。现有仅调用 `protocol.Register(Plugin)` 的插件无需修改，仍挂在默认「全部消息」链上。
 
+### 1.6.1 触发条件与 BlockNext（Trigger and BlockNext）
+
+协议层 `protocol.Context` 提供以下方法，用于在插件内做权限/触发条件判断，或通知宿主停止执行后续插件：
+
+- **IsAdmin() bool**：发送者是否为群管理员或群主（TriggerOnlyAdmin）。在插件入口处 `if !ctx.IsAdmin() { return }` 即可仅对管理员生效。
+- **IsSuperAdmin() bool**：发送者是否为超级管理员（TriggerOnlySuperAdmin）。用法同上，`if !ctx.IsSuperAdmin() { return }`。
+- **IsOnlyToMe() bool**：当前消息是否「仅对机器人」（回复或 @ 机器人）。可用于 `if !ctx.IsOnlyToMe() { return }`（OnlyToMe）；或直接注册到 `HookMessageReply` 链由宿主过滤。
+- **BlockNext()**：插件处理完本条消息后调用 `ctx.BlockNext()`，宿主将不再执行同链上的后续插件（BlockNextPlugin）。
+
+以上均为插件内自检或主动调用，无需在注册时声明选项；宿主已按约定在 dispatch 中检查 `ShouldBlockNext()` 并在每轮 handler 后 break。
+
+### 1.6.2 链式注册 API（WithMeta + Engine）
+
+推荐使用 **链式（fluent）API** 在注册时声明 Meta 与触发条件，由协议层在调用 handler 前过滤。
+
+- **初始化时必须**：先调用 `protocol.Engine.WithMeta(Meta)`，传入插件元信息（如 `types.PluginEngine`）；无 Meta 的插件可传 `nil`。返回 `PluginBuilder` 再链式调用。
+- **链式入口**：`p.OnMessage()` 对应默认消息链（HookMessage），`p.OnMessageReply()` 对应仅回复/@ 链（HookMessageReply）。可选 `p.OnMessageNamed("Global")` 与 `OnMessage()` 等价。
+- **链式条件**（可组合）：`.IsOnlyToMe()`、`.IsOnlyAdmin()`、`.IsOnlySuperAdmin()`。
+- **注册**：以 `.Func(handler)` 结束；若设置了任一条件，则 handler 会被包装为「条件通过才调用」。
+- **同一插件内可多次调用**：可保存 `p := protocol.Engine.WithMeta(Meta)` 后多次 `p.OnMessage().Func(...)` / `p.OnMessageReply().Func(...)`。
+
+示例（单注册与多注册）：
+
+```go
+// Single registration with Meta.
+var Meta = types.NewPluginEngine("plugin-hello-001", "plugin-hello", "skill", true)
+func init() { protocol.Engine.WithMeta(Meta).OnMessage().Func(Plugin) }
+
+// Multiple registrations: one WithMeta, then chain.
+func init() {
+	p := protocol.Engine.WithMeta(Meta)
+	p.OnMessage().Func(HandleAll)
+	p.OnMessage().IsOnlyToMe().IsOnlyAdmin().Func(HandleOnlyToMeAdmin)
+	p.OnMessageReply().IsOnlySuperAdmin().Func(HandleReplySuper)
+}
+```
+
+`BlockNext()` 仍在 handler 内按需调用 `ctx.BlockNext()`，不在链式 API 上声明。
+
 ### 1.5 插件内行为约定
 
 - 仅通过 `ctx` 与用户/环境交互：`ctx.PlainText()`、`ctx.Reply()`、`ctx.Send()`、`ctx.UserID()`、`ctx.GroupID()`、`ctx.IsSuperAdmin()` 等。

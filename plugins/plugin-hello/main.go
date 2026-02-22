@@ -7,12 +7,10 @@ import (
 	"github.com/Hafuunano/Protocol-ConvertTool/protocol"
 )
 
-// Meta is this plugin's metadata; use Meta.PluginID, Meta.PluginName, etc. inside this package.
+// Meta and registration (use Meta.PluginID, Meta.PluginName etc. in this package).
 var Meta = types.NewPluginEngine("plugin-hello-001", "plugin-hello", "skill", true)
 
-func init() {
-	protocol.Register(Plugin)
-}
+func init() { protocol.Engine.WithMeta(Meta).OnMessage().Func(Plugin) }
 
 // triggerWord is loaded in Init(); default is "hello".
 var triggerWord = "hello"
