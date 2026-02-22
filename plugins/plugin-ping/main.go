@@ -6,13 +6,11 @@ import "github.com/Hafuunano/Protocol-ConvertTool/protocol"
 var p = protocol.Engine.WithMeta(nil)
 
 func init() {
-	p.OnMessage().Func(Plugin)
+	p.OnMessage("ping").Func(Plugin)
 }
 
 func Plugin(ctx protocol.Context) {
-	if ctx.PlainText() == "ping" {
-		ctx.Reply(protocol.Message{
-			protocol.Segment{Type: protocol.SegmentTypeText, Data: map[string]any{"text": "pong"}},
-		})
-	}
+	ctx.Reply(protocol.Message{
+		protocol.Segment{Type: protocol.SegmentTypeText, Data: map[string]any{"text": "pong"}},
+	})
 }
