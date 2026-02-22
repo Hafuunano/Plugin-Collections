@@ -1,6 +1,6 @@
 module github.com/Hafuunano/Plugin-Collections
 
-go 1.25.6
+go 1.25.7
 
 require (
 	github.com/Hafuunano/Core-SkillAction v0.0.0-20260222154012-68dd52018668
@@ -8,4 +8,3 @@ require (
 )
 
 
-replace github.com/Hafuunano/Protocol-ConvertTool => ../Protocol-ConvertTool
