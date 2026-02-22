@@ -84,13 +84,14 @@ func isGroupRegistered(s *database.Store, gid string) bool {
 
 func handleSetOrderCardRegister(ctx protocol.Context) {
 	text := strings.TrimSpace(ctx.PlainText())
-	if !strings.HasPrefix(text, "/setOrderCardRegister") {
+	prefix := ctx.CommandPrefix()
+	if !strings.HasPrefix(text, prefix+"setOrderCardRegister") {
 		return
 	}
 	parts := strings.Fields(text)
-	// /setOrderCardRegister gid [p1] [p2]
+	// {prefix}setOrderCardRegister gid [p1] [p2]
 	if len(parts) < 2 {
-		_ = ctx.SendPlainMessage("用法: /setOrderCardRegister <群号> <口令1> [口令2]")
+		_ = ctx.SendPlainMessage("用法: " + prefix + "setOrderCardRegister <群号> <口令1> [口令2]")
 		return
 	}
 	gid := parts[1]
@@ -119,12 +120,13 @@ func handleSetOrderCardRegister(ctx protocol.Context) {
 
 func handleRemoveOrderCardRegister(ctx protocol.Context) {
 	text := strings.TrimSpace(ctx.PlainText())
-	if !strings.HasPrefix(text, "/removeOrderCardRegister") {
+	prefix := ctx.CommandPrefix()
+	if !strings.HasPrefix(text, prefix+"removeOrderCardRegister") {
 		return
 	}
 	parts := strings.Fields(text)
 	if len(parts) < 2 {
-		_ = ctx.SendPlainMessage("用法: /removeOrderCardRegister <群号>")
+		_ = ctx.SendPlainMessage("用法: " + prefix + "removeOrderCardRegister <群号>")
 		return
 	}
 	gid := parts[1]
@@ -135,9 +137,9 @@ func handleRemoveOrderCardRegister(ctx protocol.Context) {
 	_ = s.Delete(keyPrefixGroup + gid)
 	_ = s.Delete(keyPrefixData + gid)
 	// Remove cooldown keys for this group
-	prefix := keyPrefixCooldown + gid + ":"
+	cooldownKeyPrefix := keyPrefixCooldown + gid + ":"
 	for _, e := range s.List() {
-		if strings.HasPrefix(e.Key, prefix) {
+		if strings.HasPrefix(e.Key, cooldownKeyPrefix) {
 			_ = s.Delete(e.Key)
 		}
 	}

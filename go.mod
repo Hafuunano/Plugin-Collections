@@ -7,6 +7,8 @@ require (
 	github.com/Hafuunano/Protocol-ConvertTool v0.0.0-20260222192558-f0c62f1bac96
 )
 
+replace github.com/Hafuunano/Protocol-ConvertTool => ../Protocol-ConvertTool
+
 require (
 	github.com/FloatTech/ttl v0.0.0-20250224045156-012b1463287d // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
